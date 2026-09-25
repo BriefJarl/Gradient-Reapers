@@ -1,0 +1,51 @@
+# =========================
+# Amazon ML Challenge Data
+# =========================
+
+# Challenge dataset - DO NOT COMMIT
+student_resource/dataset/
+
+# macOS extraction artifacts
+__MACOSX/
+**/.DS_Store
+
+# =========================
+# Python
+# =========================
+
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# =========================
+# Jupyter
+# =========================
+
+.ipynb_checkpoints/
+
+# =========================
+# Environment / Secrets
+# =========================
+
+.env
+.env.*
+!.env.example
+
+# =========================
+# IDE
+# =========================
+
+.vscode/
+.idea/
+
+# =========================
+# OS files
+# =========================
+
+Thumbs.db
+Desktop.ini
