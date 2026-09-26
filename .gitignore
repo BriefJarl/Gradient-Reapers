@@ -49,3 +49,25 @@ env/
 
 Thumbs.db
 Desktop.ini
+
+# Generated / temporary files
+.tmp/
+artifacts/
+output/
+
+# Python cache
+__pycache__/
+*.py[cod]
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Local environment
+.venv/
+venv/
+env/
+
+# OS files
+.DS_Store
+Thumbs.db
+Desktop.ini
