@@ -10,16 +10,22 @@ No pandas. DuckDB-native joins. Resumable per source.
 
 import argparse
 import os
+import sys
 from pathlib import Path
 
 import duckdb
+
+# Direct script execution (python .\src\inference\...) does not put the
+# repository root on sys.path. Add it explicitly so the import is robust.
+ROOT = Path(__file__).resolve().parents[2]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
 try:
     from src.features.pair_features import build_feature_select, feature_column_names
 except ModuleNotFoundError:
     from pair_features import build_feature_select, feature_column_names
 
-ROOT = Path(__file__).resolve().parents[2]
 NORMALIZED = ROOT / "artifacts" / "normalized"
 BLOCKING = ROOT / "artifacts" / "blocking"
 FEATURE_DIR = ROOT / "artifacts" / "features" / "final_test"
