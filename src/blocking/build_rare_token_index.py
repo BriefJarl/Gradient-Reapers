@@ -6,10 +6,6 @@ from pathlib import Path
 import duckdb
 
 
-# ============================================================
-# PATHS
-# ============================================================
-
 ROOT = Path(__file__).resolve().parents[2]
 
 NORMALIZED_DIR = ROOT / "artifacts" / "normalized"
@@ -22,23 +18,14 @@ INDEX_DIR.mkdir(
 )
 
 
-# ============================================================
-# DATASETS
-# ============================================================
 
 TARGETS = {
     "S2": NORMALIZED_DIR / "train_s2.parquet",
     "S3": NORMALIZED_DIR / "train_s3.parquet",
 }
 
-
-# ============================================================
-# RARE-TOKEN CONFIGURATION
-# ============================================================
-
 # A token appearing in at most this many target records
 # is considered sufficiently selective for blocking.
-#
 # This is deliberately conservative because the datasets
 # contain millions of records.
 MAX_TOKEN_FREQ = 50
@@ -47,10 +34,6 @@ MAX_TOKEN_FREQ = 50
 # This avoids accidentally damaging multilingual data.
 MIN_TOKEN_LENGTH = 1
 
-
-# ============================================================
-# HELPERS
-# ============================================================
 
 def sql_path(path: Path) -> str:
     """
@@ -71,10 +54,6 @@ def output_path(
         / f"train_{source_name.lower()}_rare_{token_type}_token_index.parquet"
     )
 
-
-# ============================================================
-# BUILD ONE RARE TOKEN INDEX
-# ============================================================
 
 def build_index(
     con: duckdb.DuckDBPyConnection,
@@ -102,17 +81,7 @@ def build_index(
     print(f"Output : {output}")
     print(f"Max token frequency : {MAX_TOKEN_FREQ}")
 
-    # --------------------------------------------------------
-    # Name tokens:
-    #
-    # Pure numeric tokens are excluded because numbers in
-    # business names are generally poor standalone keys.
-    #
-    # Address tokens:
-    #
-    # Numeric tokens are retained because house/building
-    # numbers can be highly informative.
-    # --------------------------------------------------------
+
 
     numeric_filter = ""
 
@@ -185,9 +154,6 @@ def build_index(
 
     con.execute(query)
 
-    # --------------------------------------------------------
-    # Validation statistics
-    # --------------------------------------------------------
 
     total_rows = con.execute(
         f"""
@@ -233,11 +199,6 @@ def build_index(
         )
 
     return output
-
-
-# ============================================================
-# MAIN
-# ============================================================
 
 def main() -> None:
 
