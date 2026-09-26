@@ -4,6 +4,10 @@ from pathlib import Path
 import duckdb
 
 
+# ============================================================
+# PATHS
+# ============================================================
+
 ROOT = Path(__file__).resolve().parents[2]
 
 BLOCKING_DIR = ROOT / "artifacts" / "blocking"
@@ -12,12 +16,15 @@ CANDIDATE_DIR = BLOCKING_DIR / "candidates"
 
 BASE = UNION_DIR / "train_optimized_candidates.parquet"
 RARE_NAME = CANDIDATE_DIR / "train_rare_name_candidates.parquet"
-
-OUTPUT = UNION_DIR / "train_optimized_plus_rare_name.parquet"
+GROUND_TRUTH = BLOCKING_DIR / "ground_truth_pairs.parquet"
 
 THREADS = 8
 MEMORY_LIMIT = "8GB"
 
+
+# ============================================================
+# HELPERS
+# ============================================================
 
 def sql_path(path: Path) -> str:
     return str(path).replace("\\", "/")
@@ -47,44 +54,38 @@ def get_columns(con, path: Path) -> list[str]:
     return [row[0] for row in rows]
 
 
-def find_column(columns: list[str], candidates: list[str]) -> str | None:
-    lookup = {c.lower(): c for c in columns}
-
-    for candidate in candidates:
-        if candidate.lower() in lookup:
-            return lookup[candidate.lower()]
-
-    return None
-
+# ============================================================
+# MAIN
+# ============================================================
 
 def main() -> None:
 
     print("=" * 80)
-    print("RARE-NAME UNION EXPERIMENT")
+    print("RARE-NAME INCREMENTAL BLOCKING ANALYSIS")
     print("=" * 80)
 
-    if not BASE.exists():
-        raise FileNotFoundError(
-            f"Base candidate file not found:\n{BASE}"
-        )
+    # --------------------------------------------------------
+    # Validate files
+    # --------------------------------------------------------
 
-    if not RARE_NAME.exists():
-        raise FileNotFoundError(
-            f"Rare-name candidate file not found:\n{RARE_NAME}"
-        )
+    for path in [BASE, RARE_NAME, GROUND_TRUTH]:
+        if not path.exists():
+            raise FileNotFoundError(
+                f"\nRequired file not found:\n{path}"
+            )
 
     print()
-    print(f"BASE      : {BASE}")
-    print(f"RARE NAME : {RARE_NAME}")
-    print(f"OUTPUT    : {OUTPUT}")
+    print(f"BASE         : {BASE}")
+    print(f"RARE NAME    : {RARE_NAME}")
+    print(f"GROUND TRUTH : {GROUND_TRUTH}")
+
+    # --------------------------------------------------------
+    # DuckDB
+    # --------------------------------------------------------
 
     con = duckdb.connect()
 
     try:
-
-        # ------------------------------------------------------------
-        # DuckDB configuration
-        # ------------------------------------------------------------
 
         con.execute(f"SET threads = {THREADS}")
         con.execute(f"SET memory_limit = '{MEMORY_LIMIT}'")
@@ -98,12 +99,34 @@ def main() -> None:
             f"SET temp_directory = '{sql_quote(temp_dir)}'"
         )
 
-        # ------------------------------------------------------------
+        base_sql = sql_quote(BASE)
+        rare_sql = sql_quote(RARE_NAME)
+        gt_sql = sql_quote(GROUND_TRUTH)
+
+        # ----------------------------------------------------
+        # Basic counts
+        # ----------------------------------------------------
+
+        print()
+        print("-" * 80)
+        print("BASIC COUNTS")
+        print("-" * 80)
+
+        base_count = count_rows(con, BASE)
+        rare_count = count_rows(con, RARE_NAME)
+        gt_count = count_rows(con, GROUND_TRUTH)
+
+        print(f"Base candidates       : {base_count:,}")
+        print(f"Rare-name candidates  : {rare_count:,}")
+        print(f"Ground-truth pairs    : {gt_count:,}")
+
+        # ----------------------------------------------------
         # Inspect schemas
-        # ------------------------------------------------------------
+        # ----------------------------------------------------
 
         base_columns = get_columns(con, BASE)
         rare_columns = get_columns(con, RARE_NAME)
+        gt_columns = get_columns(con, GROUND_TRUTH)
 
         print()
         print("BASE COLUMNS:")
@@ -113,223 +136,292 @@ def main() -> None:
         print("RARE-NAME COLUMNS:")
         print(", ".join(rare_columns))
 
-        # ------------------------------------------------------------
-        # Resolve important columns
-        # ------------------------------------------------------------
-
-        s1_col = find_column(
-            rare_columns,
-            [
-                "source1_entity_id",
-                "entity_id",
-                "source1_id",
-            ],
-        )
-
-        matched_col = find_column(
-            rare_columns,
-            [
-                "matched_entity_id",
-                "entity_id_source2",
-                "matched_id",
-            ],
-        )
-
-        source_col = find_column(
-            rare_columns,
-            [
-                "matched_source",
-                "source",
-                "matched_source_name",
-            ],
-        )
-
-        block_col = find_column(
-            rare_columns,
-            [
-                "block_name",
-                "blocking_method",
-                "block",
-            ],
-        )
-
-        if s1_col is None:
-            raise ValueError(
-                "Could not identify Source-1 entity ID column "
-                f"in rare-name file.\nColumns: {rare_columns}"
-            )
-
-        if matched_col is None:
-            raise ValueError(
-                "Could not identify matched entity ID column "
-                f"in rare-name file.\nColumns: {rare_columns}"
-            )
-
-        if source_col is None:
-            raise ValueError(
-                "Could not identify matched source column "
-                f"in rare-name file.\nColumns: {rare_columns}"
-            )
-
-        if block_col is None:
-            raise ValueError(
-                "Could not identify blocking method column "
-                f"in rare-name file.\nColumns: {rare_columns}"
-            )
-
         print()
-        print("Resolved rare-name schema:")
-        print(f"  S1 ID       : {s1_col}")
-        print(f"  Matched ID  : {matched_col}")
-        print(f"  Source      : {source_col}")
-        print(f"  Block       : {block_col}")
+        print("GROUND-TRUTH COLUMNS:")
+        print(", ".join(gt_columns))
 
-        # ------------------------------------------------------------
-        # Counts
-        # ------------------------------------------------------------
-
-        base_count = count_rows(con, BASE)
-        rare_count = count_rows(con, RARE_NAME)
-
-        print()
-        print(f"Base candidates      : {base_count:,}")
-        print(f"Rare-name candidates : {rare_count:,}")
-
-        # ------------------------------------------------------------
-        # Remove old experiment output if present
-        # ------------------------------------------------------------
-
-        if OUTPUT.exists():
-            OUTPUT.unlink()
-
-        # ------------------------------------------------------------
-        # Build UNION
-        #
-        # Existing optimized candidates already have:
-        #   blocking_mask
-        #   num_blocking_methods
-        #   blocking_methods
-        #
-        # Rare-name candidates are converted to:
-        #   blocking_mask = 8
-        #   num_blocking_methods = 1
-        #   blocking_methods = rare_name
-        # ------------------------------------------------------------
+        # ----------------------------------------------------
+        # Check duplicate pairs in rare-name candidates
+        # ----------------------------------------------------
 
         print()
         print("-" * 80)
-        print("BUILDING RARE-NAME UNION")
+        print("CHECKING RARE-NAME DUPLICATES")
         print("-" * 80)
 
-        base_sql = sql_quote(BASE)
-        rare_sql = sql_quote(RARE_NAME)
-        output_sql = sql_quote(OUTPUT)
-
-        con.execute(
+        rare_distinct_pairs = con.execute(
             f"""
-            COPY
+            SELECT COUNT(*)
+            FROM
             (
-                WITH combined AS
+                SELECT DISTINCT
+                    source1_entity_id,
+                    matched_entity_id,
+                    matched_source
+                FROM read_parquet('{rare_sql}')
+            )
+            """
+        ).fetchone()[0]
+
+        rare_duplicate_rows = rare_count - rare_distinct_pairs
+
+        print(f"Rare-name rows          : {rare_count:,}")
+        print(f"Distinct rare-name     : {rare_distinct_pairs:,}")
+        print(f"Duplicate rows         : {rare_duplicate_rows:,}")
+
+        # ----------------------------------------------------
+        # True pairs recovered by rare-name
+        # ----------------------------------------------------
+
+        print()
+        print("-" * 80)
+        print("RARE-NAME TRUE-PAIR RECOVERY")
+        print("-" * 80)
+
+        rare_true_pairs = con.execute(
+            f"""
+            SELECT COUNT(*)
+            FROM
+            (
+                SELECT DISTINCT
+                    r.source1_entity_id,
+                    r.matched_entity_id,
+                    r.matched_source
+
+                FROM read_parquet('{rare_sql}') r
+
+                INNER JOIN read_parquet('{gt_sql}') g
+                    ON r.source1_entity_id = g.source1_entity_id
+                   AND r.matched_entity_id = g.matched_entity_id
+                   AND r.matched_source = g.matched_source
+            )
+            """
+        ).fetchone()[0]
+
+        print(
+            f"True pairs recovered by rare-name : "
+            f"{rare_true_pairs:,}"
+        )
+
+        rare_recall = (
+            rare_true_pairs / gt_count
+            if gt_count
+            else 0.0
+        )
+
+        print(
+            f"Rare-name standalone recall       : "
+            f"{rare_recall * 100:.6f}%"
+        )
+
+        # ----------------------------------------------------
+        # TRUE pairs already recovered by BASE
+        # ----------------------------------------------------
+
+        print()
+        print("-" * 80)
+        print("BASE TRUE-PAIR RECOVERY")
+        print("-" * 80)
+
+        base_true_pairs = con.execute(
+            f"""
+            SELECT COUNT(*)
+            FROM
+            (
+                SELECT DISTINCT
+                    b.source1_entity_id,
+                    b.matched_entity_id,
+                    b.matched_source
+
+                FROM read_parquet('{base_sql}') b
+
+                INNER JOIN read_parquet('{gt_sql}') g
+                    ON b.source1_entity_id = g.source1_entity_id
+                   AND b.matched_entity_id = g.matched_entity_id
+                   AND b.matched_source = g.matched_source
+            )
+            """
+        ).fetchone()[0]
+
+        print(
+            f"Base true pairs : {base_true_pairs:,}"
+        )
+
+        # ----------------------------------------------------
+        # INCREMENTAL TRUE PAIRS
+        #
+        # This is the critical calculation.
+        #
+        # Rare-name true pairs that are NOT already in BASE.
+        # ----------------------------------------------------
+
+        print()
+        print("-" * 80)
+        print("INCREMENTAL TRUE-PAIR RECOVERY")
+        print("-" * 80)
+
+        incremental_true_pairs = con.execute(
+            f"""
+            SELECT COUNT(*)
+            FROM
+            (
+                SELECT DISTINCT
+                    r.source1_entity_id,
+                    r.matched_entity_id,
+                    r.matched_source
+
+                FROM read_parquet('{rare_sql}') r
+
+                INNER JOIN read_parquet('{gt_sql}') g
+                    ON r.source1_entity_id = g.source1_entity_id
+                   AND r.matched_entity_id = g.matched_entity_id
+                   AND r.matched_source = g.matched_source
+
+                ANTI JOIN
                 (
-                    SELECT
-                        source1_entity_id,
-                        matched_entity_id,
-                        matched_source,
-                        blocking_mask,
-                        num_blocking_methods,
-                        blocking_methods
-                    FROM read_parquet('{base_sql}')
-
-                    UNION ALL
-
-                    SELECT
-                        {s1_col} AS source1_entity_id,
-                        {matched_col} AS matched_entity_id,
-                        {source_col} AS matched_source,
-
-                        8 AS blocking_mask,
-
-                        1 AS num_blocking_methods,
-
-                        'rare_name' AS blocking_methods
-
-                    FROM read_parquet('{rare_sql}')
-                ),
-
-                deduplicated AS
-                (
-                    SELECT
-                        source1_entity_id,
-                        matched_entity_id,
-                        matched_source,
-
-                        BIT_OR(blocking_mask) AS blocking_mask,
-
-                        COUNT(DISTINCT blocking_methods)
-                            AS num_blocking_methods,
-
-                        STRING_AGG(
-                            DISTINCT blocking_methods,
-                            '|'
-                            ORDER BY blocking_methods
-                        ) AS blocking_methods
-
-                    FROM combined
-
-                    GROUP BY
+                    SELECT DISTINCT
                         source1_entity_id,
                         matched_entity_id,
                         matched_source
-                )
+                    FROM read_parquet('{base_sql}')
+                ) b
 
-                SELECT
-                    source1_entity_id,
-                    matched_entity_id,
-                    matched_source,
-                    blocking_mask,
-                    CAST(num_blocking_methods AS TINYINT)
-                        AS num_blocking_methods,
-                    blocking_methods
-
-                FROM deduplicated
-            )
-
-            TO '{output_sql}'
-            (
-                FORMAT PARQUET,
-                COMPRESSION SNAPPY,
-                ROW_GROUP_SIZE 500000
+                    ON r.source1_entity_id = b.source1_entity_id
+                   AND r.matched_entity_id = b.matched_entity_id
+                   AND r.matched_source = b.matched_source
             )
             """
-        )
+        ).fetchone()[0]
 
-        # ------------------------------------------------------------
-        # Final statistics
-        # ------------------------------------------------------------
-
-        final_count = count_rows(con, OUTPUT)
-
-        print()
-        print("=" * 80)
-        print("RARE-NAME UNION COMPLETE")
-        print("=" * 80)
-
-        print()
-        print(f"Original candidates : {base_count:,}")
-        print(f"Rare-name input     : {rare_count:,}")
-        print(f"Final unique        : {final_count:,}")
         print(
-            f"Additional unique   : "
-            f"{final_count - base_count:,}"
+            f"NEW true pairs from rare-name : "
+            f"{incremental_true_pairs:,}"
+        )
+
+        incremental_recall = (
+            incremental_true_pairs / gt_count
+            if gt_count
+            else 0.0
+        )
+
+        print(
+            f"Incremental recall gain       : "
+            f"{incremental_recall * 100:.6f}%"
+        )
+
+        # ----------------------------------------------------
+        # NEW CANDIDATE ESTIMATE
+        #
+        # Distinct rare-name candidates not in BASE.
+        # We do this separately from the truth calculation.
+        # ----------------------------------------------------
+
+        print()
+        print("-" * 80)
+        print("INCREMENTAL CANDIDATE VOLUME")
+        print("-" * 80)
+
+        new_candidate_count = con.execute(
+            f"""
+            SELECT COUNT(*)
+            FROM
+            (
+                SELECT DISTINCT
+                    r.source1_entity_id,
+                    r.matched_entity_id,
+                    r.matched_source
+
+                FROM read_parquet('{rare_sql}') r
+
+                ANTI JOIN
+                (
+                    SELECT DISTINCT
+                        source1_entity_id,
+                        matched_entity_id,
+                        matched_source
+                    FROM read_parquet('{base_sql}')
+                ) b
+
+                    ON r.source1_entity_id = b.source1_entity_id
+                   AND r.matched_entity_id = b.matched_entity_id
+                   AND r.matched_source = b.matched_source
+            )
+            """
+        ).fetchone()[0]
+
+        print(
+            f"New unique candidates : "
+            f"{new_candidate_count:,}"
+        )
+
+        # ----------------------------------------------------
+        # Incremental purity
+        # ----------------------------------------------------
+
+        incremental_purity = (
+            incremental_true_pairs / new_candidate_count
+            if new_candidate_count
+            else 0.0
+        )
+
+        print(
+            f"Incremental purity     : "
+            f"{incremental_purity * 100:.6f}%"
+        )
+
+        # ----------------------------------------------------
+        # Projected combined statistics
+        # ----------------------------------------------------
+
+        projected_candidates = (
+            base_count + new_candidate_count
+        )
+
+        projected_true_pairs = (
+            base_true_pairs + incremental_true_pairs
+        )
+
+        projected_recall = (
+            projected_true_pairs / gt_count
+            if gt_count
+            else 0.0
+        )
+
+        projected_purity = (
+            projected_true_pairs / projected_candidates
+            if projected_candidates
+            else 0.0
         )
 
         print()
-        print(f"OUTPUT:")
-        print(OUTPUT)
+        print("=" * 80)
+        print("PROJECTED COMBINED BLOCKING")
+        print("=" * 80)
+
+        print()
+        print(
+            f"Projected candidates : "
+            f"{projected_candidates:,}"
+        )
+
+        print(
+            f"Projected true pairs : "
+            f"{projected_true_pairs:,}"
+        )
+
+        print(
+            f"Projected recall     : "
+            f"{projected_recall * 100:.6f}%"
+        )
+
+        print(
+            f"Projected purity     : "
+            f"{projected_purity * 100:.6f}%"
+        )
 
         print()
         print("=" * 80)
-        print("SUCCESS")
+        print("RARE-NAME ANALYSIS COMPLETE")
         print("=" * 80)
 
     finally:
