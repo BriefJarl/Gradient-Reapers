@@ -5,10 +5,6 @@ from pathlib import Path
 import duckdb
 
 
-# ============================================================
-# PATHS
-# ============================================================
-
 ROOT = Path(__file__).resolve().parents[2]
 
 NORMALIZED_DIR = ROOT / "artifacts" / "normalized"
@@ -25,17 +21,10 @@ SOURCES = {
 }
 
 
-# ============================================================
-# HELPERS
-# ============================================================
 
 def sql_path(path: Path) -> str:
     return str(path).replace("\\", "/")
 
-
-# ============================================================
-# BASIC INDEX
-# ============================================================
 
 def build_basic_index(
     con: duckdb.DuckDBPyConnection,
@@ -49,9 +38,7 @@ def build_basic_index(
 
     p = sql_path(path)
 
-    # --------------------------------------------------------
-    # Keep only fields needed by blocking.
-    # --------------------------------------------------------
+
 
     output = INDEX_DIR / f"{source.lower()}_blocking_base.parquet"
     output_sql = sql_path(output)
@@ -87,10 +74,6 @@ def build_basic_index(
     print(f"Output : {output}")
     print(f"Rows   : {count:,}")
 
-
-# ============================================================
-# ADDRESS BLOCKING INDEX
-# ============================================================
 
 def build_address_index(
     con: duckdb.DuckDBPyConnection,
@@ -147,11 +130,6 @@ def build_address_index(
     print(f"Distinct keys  : {distinct_keys:,}")
     print(f"Output         : {output}")
 
-
-# ============================================================
-# COMPACT ADDRESS INDEX
-# ============================================================
-
 def build_compact_address_index(
     con: duckdb.DuckDBPyConnection,
     source: str,
@@ -195,10 +173,6 @@ def build_compact_address_index(
     print(f"Output         : {output}")
 
 
-# ============================================================
-# EXACT NAME INDEX
-# ============================================================
-
 def build_name_index(
     con: duckdb.DuckDBPyConnection,
     source: str,
@@ -241,10 +215,6 @@ def build_name_index(
     print(f"Rows           : {count:,}")
     print(f"Output         : {output}")
 
-
-# ============================================================
-# MAIN
-# ============================================================
 
 def main() -> None:
 
