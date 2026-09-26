@@ -32,10 +32,6 @@ def main():
 
     con.execute("SET threads = 8")
 
-    # ------------------------------------------------------------------
-    # Candidate distribution by blocking mask
-    # ------------------------------------------------------------------
-
     print("\n" + "-" * 80)
     print("BLOCKING MASK DISTRIBUTION")
     print("-" * 80)
@@ -56,10 +52,6 @@ def main():
 
     print(mask_df.to_string(index=False))
 
-    # ------------------------------------------------------------------
-    # Rare-address-only candidates
-    # ------------------------------------------------------------------
-
     print("\n" + "-" * 80)
     print("RARE-ADDRESS-ONLY CANDIDATES")
     print("-" * 80)
@@ -73,10 +65,6 @@ def main():
     ).fetchdf()
 
     print(rare_address_df.to_string(index=False))
-
-    # ------------------------------------------------------------------
-    # Ground truth coverage by blocking mask
-    # ------------------------------------------------------------------
 
     print("\n" + "-" * 80)
     print("TRUE PAIRS BY BLOCKING MASK")
@@ -101,10 +89,6 @@ def main():
     ).fetchdf()
 
     print(truth_df.to_string(index=False))
-
-    # ------------------------------------------------------------------
-    # Candidate / true ratio
-    # ------------------------------------------------------------------
 
     print("\n" + "-" * 80)
     print("CANDIDATE QUALITY BY BLOCKING MASK")
