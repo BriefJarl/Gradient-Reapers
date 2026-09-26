@@ -6,10 +6,6 @@ from pathlib import Path
 import duckdb
 
 
-# ============================================================
-# PATHS
-# ============================================================
-
 ROOT = Path(__file__).resolve().parents[2]
 
 NORMALIZED_DIR = ROOT / "artifacts" / "normalized"
@@ -26,10 +22,6 @@ CANDIDATE_DIR.mkdir(
 )
 
 
-# ============================================================
-# DATASETS
-# ============================================================
-
 S1_PATH = NORMALIZED_DIR / "train_s1.parquet"
 
 TARGETS = {
@@ -38,16 +30,8 @@ TARGETS = {
 }
 
 
-# ============================================================
-# RARE TOKEN CONFIG
-# ============================================================
-
 RARE_TOKEN_TOP_K = 2
 
-
-# ============================================================
-# HELPERS
-# ============================================================
 
 def sql_path(path: Path) -> str:
     """
@@ -115,9 +99,6 @@ EXACT_BLOCKS = {
 }
 
 
-# ============================================================
-# GENERATE EXACT BLOCK
-# ============================================================
 
 def generate_exact_block(
     con: duckdb.DuckDBPyConnection,
@@ -224,9 +205,6 @@ def generate_exact_block(
             f"Output       : {source_output}"
         )
 
-    # --------------------------------------------------------
-    # Combine S2 + S3
-    # --------------------------------------------------------
 
     s2_file = sql_path(
         CANDIDATE_DIR
@@ -279,10 +257,6 @@ def generate_exact_block(
 
     return output
 
-
-# ============================================================
-# GENERATE RARE TOKEN BLOCK
-# ============================================================
 
 def generate_rare_token_block(
     con: duckdb.DuckDBPyConnection,
@@ -510,10 +484,6 @@ def generate_rare_token_block(
             f"Output       : {source_output}"
         )
 
-    # --------------------------------------------------------
-    # Combine S2 + S3
-    # --------------------------------------------------------
-
     s2_file = sql_path(
         CANDIDATE_DIR
         / f"train_s2_{block_name}_candidates.parquet"
@@ -565,10 +535,6 @@ def generate_rare_token_block(
 
     return output
 
-
-# ============================================================
-# MAIN
-# ============================================================
 
 def main() -> None:
 
