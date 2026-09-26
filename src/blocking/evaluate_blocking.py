@@ -6,10 +6,6 @@ from pathlib import Path
 import duckdb
 
 
-# ============================================================
-# PATHS
-# ============================================================
-
 ROOT = Path(__file__).resolve().parents[2]
 
 TRAIN_DIR = (
@@ -67,10 +63,6 @@ S3_PATH = (
 )
 
 
-# ============================================================
-# HELPERS
-# ============================================================
-
 def sql_path(path: Path) -> str:
 
     return str(path).replace(
@@ -121,10 +113,6 @@ def resolve_candidate_file(
     )
 
 
-# ============================================================
-# BUILD GROUND TRUTH
-# ============================================================
-
 def build_ground_truth(
     con: duckdb.DuckDBPyConnection,
 ) -> None:
@@ -148,10 +136,6 @@ def build_ground_truth(
     s3 = sql_path(S3_PATH)
 
     output = sql_path(GT_OUTPUT)
-
-    # --------------------------------------------------------
-    # Target ID overlap safety check.
-    # --------------------------------------------------------
 
     overlap = con.execute(
         f"""
@@ -204,10 +188,6 @@ def build_ground_truth(
         raise RuntimeError(
             "S2 and S3 entity IDs overlap."
         )
-
-    # --------------------------------------------------------
-    # Build pair-level ground truth.
-    # --------------------------------------------------------
 
     query = f"""
         COPY (
@@ -329,11 +309,6 @@ def build_ground_truth(
         f"{GT_OUTPUT}"
     )
 
-
-# ============================================================
-# GROUND-TRUTH INTELLIGENCE
-# ============================================================
-
 def print_ground_truth_stats(
     con: duckdb.DuckDBPyConnection,
 ) -> None:
@@ -441,10 +416,6 @@ def print_ground_truth_stats(
         )
 
 
-# ============================================================
-# EVALUATE ONE CANDIDATE FILE
-# ============================================================
-
 def evaluate_candidates(
     con: duckdb.DuckDBPyConnection,
     candidate_path: Path,
@@ -475,10 +446,7 @@ def evaluate_candidates(
         "=" * 80
     )
 
-    # --------------------------------------------------------
-    # Candidate counts.
-    # --------------------------------------------------------
-
+   
     candidate_count = con.execute(
         f"""
         SELECT COUNT(*)
@@ -519,10 +487,8 @@ def evaluate_candidates(
         f"{unique_candidate_count:,}"
     )
 
-    # --------------------------------------------------------
+    
     # Ground-truth recovery.
-    # --------------------------------------------------------
-
     recovered = con.execute(
         f"""
         SELECT COUNT(*)
@@ -599,10 +565,8 @@ def evaluate_candidates(
         f"{purity:.6%}"
     )
 
-    # --------------------------------------------------------
+    
     # Source-wise recall.
-    # --------------------------------------------------------
-
     print(
         "\nSource-wise recall:"
     )
@@ -700,10 +664,7 @@ def evaluate_candidates(
             f"({source_recall:.6%})"
         )
 
-    # --------------------------------------------------------
     # Candidate distribution per S1.
-    # --------------------------------------------------------
-
     print(
         "\nCandidates per Source-1 entity:"
     )
@@ -810,11 +771,9 @@ def evaluate_candidates(
     print(
         f"MAX  : {max_candidates:,}"
     )
-
-    # --------------------------------------------------------
+    
     # Candidate provenance, when available.
-    # --------------------------------------------------------
-
+    
     columns = con.execute(
         f"""
         DESCRIBE
@@ -867,10 +826,6 @@ def evaluate_candidates(
             )
 
 
-# ============================================================
-# MAIN
-# ============================================================
-
 def main() -> None:
 
     parser = argparse.ArgumentParser()
@@ -898,10 +853,6 @@ def main() -> None:
 
     try:
 
-        # ----------------------------------------------------
-        # Make evaluation spill-safe.
-        # ----------------------------------------------------
-
         temp_dir = (
             BLOCKING_DIR
             / "tmp"
@@ -924,10 +875,6 @@ def main() -> None:
             SET threads = 8;
             """
         )
-
-        # ----------------------------------------------------
-        # Build GT once.
-        # ----------------------------------------------------
 
         if not GT_OUTPUT.exists():
 
