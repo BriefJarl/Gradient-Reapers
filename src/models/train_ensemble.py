@@ -101,16 +101,14 @@ def load_val_data(
     con: duckdb.DuckDBPyConnection,
     split_path: Path,
     feature_cols: list[str],
-    max_samples: int = 1_200_000,
 ) -> tuple[np.ndarray, np.ndarray]:
-    """Load representative validation monitoring sample."""
+    """Load the full validation split."""
     path_sql = str(split_path).replace("\\", "/").replace("'", "''")
     feature_list_sql = ", ".join(f'"{c}"' for c in feature_cols)
 
     query = f"""
     SELECT {feature_list_sql}, label
     FROM read_parquet('{path_sql}')
-    LIMIT {max_samples}
     """
     df = con.execute(query).fetchdf()
     X = df[feature_cols].to_numpy(dtype=np.float32)
@@ -306,15 +304,41 @@ def main() -> None:
     parser.add_argument("--valid-s1", type=str, default="")
     args = parser.parse_args()
 
-    train_path = Path(args.train_split) if args.train_split else FEATURE_DIR / "train_phase3_split.parquet"
-    if not train_path.exists():
-        train_path = FEATURE_DIR / "train_split.parquet"
+    train_path = (
+        Path(args.train_split)
+        if args.train_split
+        else FEATURE_DIR / "final_train" / "train_split.parquet"
+    )
 
-    valid_path = Path(args.valid_split) if args.valid_split else FEATURE_DIR / "valid_phase3_split.parquet"
-    if not valid_path.exists():
-        valid_path = FEATURE_DIR / "valid_split.parquet"
+    valid_path = (
+        Path(args.valid_split)
+        if args.valid_split
+        else FEATURE_DIR / "final_train" / "valid_split.parquet"
+    )
 
-    valid_s1_path = Path(args.valid_s1) if args.valid_s1 else FEATURE_DIR / "valid_s1_entities.parquet"
+    valid_s1_path = (
+        Path(args.valid_s1)
+        if args.valid_s1
+        else FEATURE_DIR / "final_train" / "valid_s1_entities.parquet"
+    )
+
+    if not valid_s1_path.exists():
+        con_tmp = duckdb.connect()
+        try:
+            valid_path_sql = str(valid_path).replace("\\", "/").replace("'", "''")
+            valid_s1_sql = str(valid_s1_path).replace("\\", "/").replace("'", "''")
+            con_tmp.execute(
+                f"""
+                COPY (
+                    SELECT DISTINCT source1_entity_id
+                    FROM read_parquet('{valid_path_sql}')
+                )
+                TO '{valid_s1_sql}'
+                (FORMAT PARQUET, COMPRESSION SNAPPY)
+                """
+            )
+        finally:
+            con_tmp.close()
 
     con = duckdb.connect()
     con.execute("SET threads = 8")
@@ -326,7 +350,7 @@ def main() -> None:
         print(f"Using {len(feature_cols)} numerical features for model ensemble.")
 
         X_train, y_train = load_balanced_data(con, train_path, feature_cols, max_positives=1_500_000, neg_to_pos_ratio=3.0)
-        X_val, y_val = load_val_data(con, valid_path, feature_cols, max_samples=1_200_000)
+        X_val, y_val = load_val_data(con, valid_path, feature_cols)
 
         lgb_model, cb_model, xgb_model = train_ensemble(X_train, y_train, X_val, y_val, feature_cols)
 
