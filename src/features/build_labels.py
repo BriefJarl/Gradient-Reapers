@@ -5,14 +5,23 @@ from pathlib import Path
 import duckdb
 
 
+import argparse
+
 ROOT = Path(__file__).resolve().parents[2]
 
-FEATURE_FILE = (
+DEFAULT_FEATURE_FILE = (
     ROOT
     / "artifacts"
     / "features"
-    / "train_features.parquet"
+    / "train_phase3_features.parquet"
 )
+if not DEFAULT_FEATURE_FILE.exists():
+    DEFAULT_FEATURE_FILE = (
+        ROOT
+        / "artifacts"
+        / "features"
+        / "train_features.parquet"
+    )
 
 GROUND_TRUTH = (
     ROOT
@@ -21,11 +30,11 @@ GROUND_TRUTH = (
     / "ground_truth_pairs.parquet"
 )
 
-OUTPUT = (
+DEFAULT_OUTPUT = (
     ROOT
     / "artifacts"
     / "features"
-    / "train_features_labeled.parquet"
+    / ("train_phase3_features_labeled.parquet" if "phase3" in str(DEFAULT_FEATURE_FILE) else "train_features_labeled.parquet")
 )
 
 THREADS = 8
@@ -41,13 +50,24 @@ def sql_quote(path: Path) -> str:
 
 
 def main() -> None:
+    parser = argparse.ArgumentParser(description="Add ground truth labels to candidate features.")
+    parser.add_argument("--features", type=str, default="", help="Input features parquet file.")
+    parser.add_argument("--output", type=str, default="", help="Output labeled features parquet file.")
+    args = parser.parse_args()
+
+    feature_file = Path(args.features) if args.features else DEFAULT_FEATURE_FILE
+    output_file = Path(args.output) if args.output else (
+        feature_file.parent / f"{feature_file.stem}_labeled.parquet"
+    )
 
     print("=" * 80)
     print("BUILDING TRAINING LABELS")
     print("=" * 80)
+    print(f"Features: {feature_file}")
+    print(f"Output:   {output_file}")
 
     for path in (
-        FEATURE_FILE,
+        feature_file,
         GROUND_TRUTH,
     ):
         if not path.exists():
@@ -55,8 +75,8 @@ def main() -> None:
                 f"Required file not found:\n{path}"
             )
 
-    if OUTPUT.exists():
-        OUTPUT.unlink()
+    if output_file.exists():
+        output_file.unlink()
 
     con = duckdb.connect()
 
@@ -95,9 +115,9 @@ def main() -> None:
             f"'{sql_quote(temp_dir)}'"
         )
 
-        feature_sql = sql_quote(FEATURE_FILE)
+        feature_sql = sql_quote(feature_file)
         gt_sql = sql_quote(GROUND_TRUTH)
-        output_sql = sql_quote(OUTPUT)
+        output_sql = sql_quote(output_file)
 
         # ----------------------------------------------------
         # Create labels
@@ -220,7 +240,7 @@ def main() -> None:
 
         print()
         print(f"OUTPUT:")
-        print(OUTPUT)
+        print(output_file)
 
         print()
         print("=" * 80)

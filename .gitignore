@@ -71,3 +71,5 @@ env/
 .DS_Store
 Thumbs.db
 Desktop.ini
+catboost_info/
+scratch/

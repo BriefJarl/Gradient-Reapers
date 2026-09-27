@@ -274,8 +274,8 @@ def build_feature_select(
             f"COALESCE({target_alias}.{sql_ident(target_name_ascii)}, '')"
         )
     else:
-        name_ascii1 = name1
-        name_ascii2 = name2
+        name_ascii1 = f"strip_accents({name1})"
+        name_ascii2 = f"strip_accents({name2})"
 
     if s1_address_ascii is not None and target_address_ascii is not None:
         address_ascii1 = (
@@ -285,8 +285,8 @@ def build_feature_select(
             f"COALESCE({target_alias}.{sql_ident(target_address_ascii)}, '')"
         )
     else:
-        address_ascii1 = addr1
-        address_ascii2 = addr2
+        address_ascii1 = f"strip_accents({addr1})"
+        address_ascii2 = f"strip_accents({addr2})"
 
     # ------------------------------------------------------------
     # Numeric token expressions
