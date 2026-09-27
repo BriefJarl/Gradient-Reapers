@@ -31,10 +31,30 @@ NORMALIZED_DIR = ROOT / "artifacts" / "normalized"
 BLOCKING_DIR = ROOT / "artifacts" / "blocking"
 FEATURE_DIR = ROOT / "artifacts" / "features"
 
-CANDIDATES = (
+PHASE3_CANDIDATES = (
     BLOCKING_DIR
     / "union"
-    / "train_optimized_candidates.parquet"
+    / "train_phase3_candidates.parquet"
+)
+
+EXPANDED_CANDIDATES = (
+    BLOCKING_DIR
+    / "union"
+    / "train_expanded_candidates.parquet"
+)
+
+CANDIDATES = (
+    PHASE3_CANDIDATES
+    if PHASE3_CANDIDATES.exists()
+    else (
+        EXPANDED_CANDIDATES
+        if EXPANDED_CANDIDATES.exists()
+        else (
+            BLOCKING_DIR
+            / "union"
+            / "train_optimized_candidates.parquet"
+        )
+    )
 )
 
 S1_PATH = NORMALIZED_DIR / "train_s1.parquet"
@@ -118,6 +138,7 @@ def build_source_features(
     source: str,
     limit_per_source: int,
     output: Path,
+    candidates_path: Path = CANDIDATES,
 ) -> int:
 
     if source not in {"S2", "S3"}:
@@ -131,7 +152,7 @@ def build_source_features(
         else S3_PATH
     )
 
-    candidate_sql = sql_quote(CANDIDATES)
+    candidate_sql = sql_quote(candidates_path)
     s1_sql = sql_quote(S1_PATH)
     target_sql = sql_quote(target_path)
     output_sql = sql_quote(output)
@@ -458,6 +479,20 @@ def parse_args() -> argparse.Namespace:
         help="Validate an existing final feature file.",
     )
 
+    parser.add_argument(
+        "--candidates",
+        type=str,
+        default="",
+        help="Path to candidates parquet file.",
+    )
+
+    parser.add_argument(
+        "--output-prefix",
+        type=str,
+        default="",
+        help="Prefix for output feature files (e.g. train_phase3_features).",
+    )
+
     return parser.parse_args()
 
 
@@ -469,6 +504,9 @@ def main() -> None:
 
     args = parse_args()
 
+    cand_path = Path(args.candidates) if args.candidates else CANDIDATES
+    out_prefix = args.output_prefix or ("train_phase3_features" if "phase3" in str(cand_path) else "train_features")
+
     print("=" * 80)
     print("AMAZON ML CHALLENGE 2026")
     print("DUCKDB-NATIVE PAIR FEATURE ENGINE")
@@ -479,7 +517,7 @@ def main() -> None:
     # --------------------------------------------------------
 
     required_files = [
-        CANDIDATES,
+        cand_path,
         S1_PATH,
         S2_PATH,
         S3_PATH,
@@ -492,11 +530,11 @@ def main() -> None:
             )
 
     print()
-    print(f"Candidates : {CANDIDATES}")
+    print(f"Candidates : {cand_path}")
     print(f"S1         : {S1_PATH}")
     print(f"S2         : {S2_PATH}")
     print(f"S3         : {S3_PATH}")
-    print(f"Output dir : {FEATURE_DIR}")
+    print(f"Output dir : {FEATURE_DIR} (Prefix: {out_prefix})")
 
     con = duckdb.connect()
 
@@ -539,7 +577,7 @@ def main() -> None:
 
         if args.validate_only:
 
-            path = FEATURE_DIR / "train_features.parquet"
+            path = FEATURE_DIR / f"{out_prefix}.parquet"
 
             if not path.exists():
                 raise FileNotFoundError(
@@ -566,12 +604,12 @@ def main() -> None:
 
             s2_output = (
                 FEATURE_DIR
-                / "train_features_sample_s2.parquet"
+                / f"{out_prefix}_sample_s2.parquet"
             )
 
             s3_output = (
                 FEATURE_DIR
-                / "train_features_sample_s3.parquet"
+                / f"{out_prefix}_sample_s3.parquet"
             )
 
             build_source_features(
@@ -579,6 +617,7 @@ def main() -> None:
                 "S2",
                 args.sample_per_source,
                 s2_output,
+                candidates_path=cand_path,
             )
 
             build_source_features(
@@ -586,6 +625,7 @@ def main() -> None:
                 "S3",
                 args.sample_per_source,
                 s3_output,
+                candidates_path=cand_path,
             )
 
             print()
@@ -611,8 +651,8 @@ def main() -> None:
             "RUNNING FULL FEATURE GENERATION"
         )
 
-        s2_output = FEATURE_DIR / "train_features_s2.parquet"
-        s3_output = FEATURE_DIR / "train_features_s3.parquet"
+        s2_output = FEATURE_DIR / f"{out_prefix}_s2.parquet"
+        s3_output = FEATURE_DIR / f"{out_prefix}_s3.parquet"
 
         if args.source in {"S2", "all"}:
             build_source_features(
@@ -620,6 +660,7 @@ def main() -> None:
                 "S2",
                 0,
                 s2_output,
+                candidates_path=cand_path,
             )
 
         if args.source in {"S3", "all"}:
@@ -628,6 +669,7 @@ def main() -> None:
                 "S3",
                 0,
                 s3_output,
+                candidates_path=cand_path,
             )
 
         # ----------------------------------------------------
@@ -638,7 +680,7 @@ def main() -> None:
 
             final_output = (
                 FEATURE_DIR
-                / "train_features.parquet"
+                / f"{out_prefix}.parquet"
             )
 
             remove_file(final_output)

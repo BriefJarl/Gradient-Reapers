@@ -566,6 +566,12 @@ def main() -> None:
     print("=" * 80)
 
     con = duckdb.connect()
+    con.execute("SET threads = 8")
+    con.execute("SET memory_limit = '8GB'")
+    con.execute("SET preserve_insertion_order = false")
+    temp_dir = BLOCKING_DIR / "duckdb_tmp"
+    temp_dir.mkdir(parents=True, exist_ok=True)
+    con.execute(f"SET temp_directory = '{sql_path(temp_dir)}'")
 
     try:
 
