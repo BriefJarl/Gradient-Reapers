@@ -8,20 +8,6 @@ from unidecode import unidecode
 from duckdb.sqltypes import VARCHAR
 
 
-# ============================================================
-# AMAZON ML CHALLENGE 2026
-# RECALL EXPANSION EXPERIMENTS
-#
-# Methods:
-#   1. ASCII / transliteration exact blocking
-#   2. Numeric-anchor blocking
-#   3. Strict rare-name blocking
-#
-# IMPORTANT:
-# This script does NOT modify the existing 31.22M candidate pool.
-# It only creates independent experiment candidate Parquets.
-# ============================================================
-
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -101,10 +87,6 @@ def check_inputs(paths: dict[str, Path]) -> None:
             )
 
 
-# ============================================================
-# ASCII / TRANSLITERATION
-# ============================================================
-
 def write_ascii(
     con: duckdb.DuckDBPyConnection,
     dataset: str,
@@ -125,16 +107,6 @@ def write_ascii(
     p1 = sql_path(s1)
     p2 = sql_path(s2)
     p3 = sql_path(s3)
-
-    # --------------------------------------------------------
-    # We intentionally derive ASCII from the EXISTING
-    # name_norm field.
-    #
-    # We do NOT require name_ascii to exist.
-    #
-    # ASCII strings are reused directly.
-    # Only non-ASCII strings call py_unidecode().
-    # --------------------------------------------------------
 
     print("[ASCII] Preparing S1 name keys...")
 
@@ -263,15 +235,7 @@ def write_ascii(
             """
         )
 
-    # --------------------------------------------------------
-    # EXACT ASCII
-    # + COMPACT ASCII
-    #
-    # Country remains part of the blocking key.
-    # We are NOT relaxing country because profiling showed
-    # country is complete in the available normalized data.
-    # --------------------------------------------------------
-
+   
     print("[ASCII] Joining S1 -> S2/S3...")
 
     query = """
@@ -367,11 +331,6 @@ def write_ascii(
 
     return out
 
-
-# ============================================================
-# NUMERIC ANCHOR BLOCKING
-# ============================================================
-
 def write_numeric(
     con: duckdb.DuckDBPyConnection,
     dataset: str,
@@ -393,28 +352,7 @@ def write_numeric(
     p2 = sql_path(s2)
     p3 = sql_path(s3)
 
-    # --------------------------------------------------------
-    # DESIGN
-    #
-    # The previous numeric implementation used:
-    #
-    #   address numbers >= 3 digits
-    #   name numbers >= 4 digits
-    #   target frequency <= 2000
-    #
-    # That can create enormous Cartesian joins.
-    #
-    # This version is intentionally conservative:
-    #
-    #   address numeric token >= 4 digits
-    #   name numeric token >= 5 digits
-    #   target frequency <= 100
-    #
-    # Country remains part of the blocking key.
-    #
-    # This is an EXPERIMENT, not the final matcher.
-    # --------------------------------------------------------
-
+    
     MAX_TARGET_FREQ = 100
 
     print("[NUMERIC] Extracting S1 anchors...")
@@ -564,12 +502,6 @@ def write_numeric(
         """
     )
 
-    # --------------------------------------------------------
-    # FREQUENCY CONTROL
-    #
-    # Only target anchors appearing <= 100 times are allowed.
-    # This prevents common numbers from generating massive joins.
-    # --------------------------------------------------------
 
     print(
         "[NUMERIC] Applying strict target frequency cap..."
@@ -633,13 +565,6 @@ def write_numeric(
         """
     )
 
-    # --------------------------------------------------------
-    # IMPORTANT OPTIMIZATION
-    #
-    # Only retain S1 anchors that actually exist in S2/S3.
-    # This avoids carrying irrelevant S1 numeric keys.
-    # --------------------------------------------------------
-
     print(
         "[NUMERIC] Restricting S1 anchors to observed target anchors..."
     )
@@ -679,13 +604,6 @@ def write_numeric(
          AND a.anchor = b.anchor
         """
     )
-
-    # --------------------------------------------------------
-    # Write S2 and S3 independently.
-    #
-    # This avoids constructing one giant UNION + DISTINCT
-    # intermediate relation.
-    # --------------------------------------------------------
 
     print("[NUMERIC] Generating S2 numeric candidates...")
 
@@ -749,12 +667,6 @@ def write_numeric(
         f"[NUMERIC] S3 candidates: {s3_count:,}"
     )
 
-    # --------------------------------------------------------
-    # Final write.
-    #
-    # Since S2 and S3 are already separately deduplicated,
-    # this UNION ALL does not require a huge global DISTINCT.
-    # --------------------------------------------------------
 
     print("[NUMERIC] Writing final numeric experiment...")
 
@@ -808,10 +720,6 @@ def write_numeric(
     return out
 
 
-# ============================================================
-# STRICT RARE NAME BLOCKING
-# ============================================================
-
 def write_rare_name(
     con: duckdb.DuckDBPyConnection,
     dataset: str,
@@ -833,27 +741,7 @@ def write_rare_name(
     p2 = sql_path(s2)
     p3 = sql_path(s3)
 
-    # --------------------------------------------------------
-    # IMPORTANT:
-    #
-    # We previously measured broad rare-name blocking:
-    #
-    # 20.8M candidates
-    # only ~636K NEW true pairs
-    # ~3.2% incremental purity
-    #
-    # Therefore this experiment is intentionally stricter.
-    #
-    # Token:
-    #   length >= 5
-    #
-    # Frequency:
-    #   <= 20 entities within country
-    #
-    # Corporate suffixes are excluded because they carry little
-    # entity-specific information.
-    # --------------------------------------------------------
-
+    
     stop_tokens = (
         "'llc','ltd','limited','inc','incorporated',"
         "'corp','corporation','co','company','pvt','private',"
@@ -1047,10 +935,6 @@ def write_rare_name(
 
     return out
 
-
-# ============================================================
-# MAIN
-# ============================================================
 
 def main() -> None:
 
