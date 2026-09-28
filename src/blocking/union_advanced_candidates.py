@@ -1,19 +1,5 @@
 from __future__ import annotations
 
-"""
-Amazon ML Challenge 2026: Advanced Candidate Union Pipeline.
-
-Memory-safe, partitioned by target source (S2, then S3):
-1. Unions candidates for S2:
-   - Base optimized candidates
-   - rare_name candidates
-   - num_pfx candidates
-   - domain_name candidates
-2. Unions candidates for S3.
-3. Streams S2 + S3 into {split}_expanded_candidates.parquet.
-
-Zero cross-source Cartesian product, strictly under 8GB RAM.
-"""
 
 import argparse
 from pathlib import Path
