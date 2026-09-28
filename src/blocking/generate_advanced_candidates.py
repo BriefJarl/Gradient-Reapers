@@ -1,18 +1,5 @@
 from __future__ import annotations
 
-"""
-Amazon ML Challenge 2026: Advanced High-Recall Candidate Generation.
-
-Generates targeted, high-precision, high-recall blocking passes:
-1. num_pfx: Street Number (address_numeric_tokens[1]) + 3-char Name Prefix
-2. core_name: Exact Name with Corporate/Legal Suffixes Stripped (inc, llc, pvt ltd, etc.)
-3. domain_name: Compact Name with Web/Domain Suffixes Stripped (.com, .org, www, etc.)
-4. rare_name: Top Rare Name Tokens via Inverted Index
-
-Operates out-of-core via DuckDB with streaming Parquet writing.
-Supports both train and test splits.
-"""
-
 import argparse
 from pathlib import Path
 import duckdb
