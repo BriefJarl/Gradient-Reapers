@@ -3,11 +3,6 @@ from __future__ import annotations
 from pathlib import Path
 import duckdb
 
-
-# ============================================================
-# PATHS
-# ============================================================
-
 ROOT = Path(__file__).resolve().parents[2]
 
 BLOCKING_DIR = ROOT / "artifacts" / "blocking"
@@ -21,10 +16,6 @@ GROUND_TRUTH = BLOCKING_DIR / "ground_truth_pairs.parquet"
 THREADS = 8
 MEMORY_LIMIT = "8GB"
 
-
-# ============================================================
-# HELPERS
-# ============================================================
 
 def sql_path(path: Path) -> str:
     return str(path).replace("\\", "/")
@@ -53,21 +44,13 @@ def get_columns(con, path: Path) -> list[str]:
 
     return [row[0] for row in rows]
 
-
-# ============================================================
-# MAIN
-# ============================================================
-
 def main() -> None:
 
     print("=" * 80)
     print("RARE-NAME INCREMENTAL BLOCKING ANALYSIS")
     print("=" * 80)
 
-    # --------------------------------------------------------
-    # Validate files
-    # --------------------------------------------------------
-
+    
     for path in [BASE, RARE_NAME, GROUND_TRUTH]:
         if not path.exists():
             raise FileNotFoundError(
@@ -78,10 +61,6 @@ def main() -> None:
     print(f"BASE         : {BASE}")
     print(f"RARE NAME    : {RARE_NAME}")
     print(f"GROUND TRUTH : {GROUND_TRUTH}")
-
-    # --------------------------------------------------------
-    # DuckDB
-    # --------------------------------------------------------
 
     con = duckdb.connect()
 
@@ -103,10 +82,7 @@ def main() -> None:
         rare_sql = sql_quote(RARE_NAME)
         gt_sql = sql_quote(GROUND_TRUTH)
 
-        # ----------------------------------------------------
-        # Basic counts
-        # ----------------------------------------------------
-
+    
         print()
         print("-" * 80)
         print("BASIC COUNTS")
@@ -120,10 +96,7 @@ def main() -> None:
         print(f"Rare-name candidates  : {rare_count:,}")
         print(f"Ground-truth pairs    : {gt_count:,}")
 
-        # ----------------------------------------------------
-        # Inspect schemas
-        # ----------------------------------------------------
-
+    
         base_columns = get_columns(con, BASE)
         rare_columns = get_columns(con, RARE_NAME)
         gt_columns = get_columns(con, GROUND_TRUTH)
@@ -139,10 +112,6 @@ def main() -> None:
         print()
         print("GROUND-TRUTH COLUMNS:")
         print(", ".join(gt_columns))
-
-        # ----------------------------------------------------
-        # Check duplicate pairs in rare-name candidates
-        # ----------------------------------------------------
 
         print()
         print("-" * 80)
@@ -169,10 +138,7 @@ def main() -> None:
         print(f"Distinct rare-name     : {rare_distinct_pairs:,}")
         print(f"Duplicate rows         : {rare_duplicate_rows:,}")
 
-        # ----------------------------------------------------
-        # True pairs recovered by rare-name
-        # ----------------------------------------------------
-
+       
         print()
         print("-" * 80)
         print("RARE-NAME TRUE-PAIR RECOVERY")
@@ -214,9 +180,6 @@ def main() -> None:
             f"{rare_recall * 100:.6f}%"
         )
 
-        # ----------------------------------------------------
-        # TRUE pairs already recovered by BASE
-        # ----------------------------------------------------
 
         print()
         print("-" * 80)
@@ -246,14 +209,6 @@ def main() -> None:
         print(
             f"Base true pairs : {base_true_pairs:,}"
         )
-
-        # ----------------------------------------------------
-        # INCREMENTAL TRUE PAIRS
-        #
-        # This is the critical calculation.
-        #
-        # Rare-name true pairs that are NOT already in BASE.
-        # ----------------------------------------------------
 
         print()
         print("-" * 80)
@@ -309,13 +264,6 @@ def main() -> None:
             f"{incremental_recall * 100:.6f}%"
         )
 
-        # ----------------------------------------------------
-        # NEW CANDIDATE ESTIMATE
-        #
-        # Distinct rare-name candidates not in BASE.
-        # We do this separately from the truth calculation.
-        # ----------------------------------------------------
-
         print()
         print("-" * 80)
         print("INCREMENTAL CANDIDATE VOLUME")
@@ -354,10 +302,6 @@ def main() -> None:
             f"{new_candidate_count:,}"
         )
 
-        # ----------------------------------------------------
-        # Incremental purity
-        # ----------------------------------------------------
-
         incremental_purity = (
             incremental_true_pairs / new_candidate_count
             if new_candidate_count
@@ -368,10 +312,6 @@ def main() -> None:
             f"Incremental purity     : "
             f"{incremental_purity * 100:.6f}%"
         )
-
-        # ----------------------------------------------------
-        # Projected combined statistics
-        # ----------------------------------------------------
 
         projected_candidates = (
             base_count + new_candidate_count
