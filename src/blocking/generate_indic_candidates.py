@@ -1,18 +1,5 @@
 from __future__ import annotations
 
-"""
-Amazon ML Challenge 2026: Indic Transliteration Candidate Generation.
-
-Transliterates non-ASCII / Indic business names (Devanagari, Tamil, Telugu, etc.)
-in Source 2 and Source 3 to Latin ASCII using unidecode, then blocks against
-Source 1 businesses in India.
-
-Features:
-- Bit mask: 256
-- Pure out-of-core streaming via DuckDB + pyarrow
-- Memory ceiling <= 8GB
-"""
-
 import argparse
 from pathlib import Path
 import time
