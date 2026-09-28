@@ -5,11 +5,6 @@ from pathlib import Path
 
 import duckdb
 
-
-# ============================================================
-# PATHS
-# ============================================================
-
 ROOT = Path(__file__).resolve().parents[2]
 
 BLOCKING_DIR = ROOT / "artifacts" / "blocking"
@@ -35,11 +30,6 @@ TEMP_DIR.mkdir(
     exist_ok=True,
 )
 
-
-# ============================================================
-# AVAILABLE BLOCKS
-# ============================================================
-
 BLOCK_FILES = {
 
     "address":
@@ -64,20 +54,6 @@ BLOCK_FILES = {
 }
 
 
-# ============================================================
-# BLOCK BIT MASKS
-#
-# Each blocking method gets one bit.
-#
-# 1  = address
-# 2  = address_compact
-# 4  = name
-# 8  = rare_name
-# 16 = rare_address
-#
-# Multiple blocks are combined with bitwise OR.
-# ============================================================
-
 BLOCK_BITS = {
 
     "address": 1,
@@ -90,11 +66,6 @@ BLOCK_BITS = {
 
     "rare_address": 16,
 }
-
-
-# ============================================================
-# PREDEFINED BLOCK SETS
-# ============================================================
 
 BLOCK_SETS = {
 
@@ -127,10 +98,6 @@ BLOCK_SETS = {
     ],
 }
 
-
-# ============================================================
-# HELPERS
-# ============================================================
 
 def sql_path(path: Path) -> str:
     """
@@ -190,10 +157,6 @@ def block_method_expression(
     return ", ".join(expressions)
 
 
-# ============================================================
-# BUILD UNION
-# ============================================================
-
 def build_union(
     con: duckdb.DuckDBPyConnection,
     block_names: list[str],
@@ -211,8 +174,6 @@ def build_union(
 
     output_sql = sql_path(output)
 
-    # Remove an old output so that a failed run
-    # cannot be mistaken for a valid result.
     if output.exists():
 
         output.unlink()
@@ -235,34 +196,20 @@ def build_union(
         f"Output: {output}"
     )
 
-    # --------------------------------------------------------
-    # Configure DuckDB.
-    #
-    # The temporary directory allows DuckDB to spill
-    # intermediate data to disk instead of requiring the
-    # entire operation to stay in RAM.
-    # --------------------------------------------------------
-
+    
     con.execute(
         f"""
         SET temp_directory = '{sql_path(TEMP_DIR)}';
         """
     )
 
-    # Keep parallelism reasonable for a very large operation.
     con.execute(
         """
         SET threads = 8;
         """
     )
 
-    # --------------------------------------------------------
-    # Build UNION ALL.
-    #
-    # We attach an integer block bit instead of a string.
-    # This is considerably cheaper than carrying long
-    # strings through the aggregation.
-    # --------------------------------------------------------
+    
 
     union_parts = []
 
@@ -310,13 +257,6 @@ def build_union(
         )
     )
 
-    # --------------------------------------------------------
-    # Aggregate.
-    #
-    # One row per unique pair.
-    #
-    # bit_or() preserves ALL blocking provenance.
-    # --------------------------------------------------------
 
     query = f"""
         COPY (
@@ -419,10 +359,6 @@ def build_union(
 
     con.execute(query)
 
-    # --------------------------------------------------------
-    # Validate output.
-    # --------------------------------------------------------
-
     total_pairs = con.execute(
         f"""
         SELECT COUNT(*)
@@ -463,9 +399,6 @@ def build_union(
         """
     ).fetchone()[0]
 
-    # --------------------------------------------------------
-    # Provenance distribution.
-    # --------------------------------------------------------
 
     provenance_rows = con.execute(
         f"""
@@ -531,10 +464,6 @@ def build_union(
 
     return output
 
-
-# ============================================================
-# MAIN
-# ============================================================
 
 def main() -> None:
 
