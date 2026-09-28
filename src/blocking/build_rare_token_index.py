@@ -24,14 +24,8 @@ TARGETS = {
     "S3": NORMALIZED_DIR / "train_s3.parquet",
 }
 
-# A token appearing in at most this many target records
-# is considered sufficiently selective for blocking.
-# This is deliberately conservative because the datasets
-# contain millions of records.
 MAX_TOKEN_FREQ = 50
 
-# We keep even one-character Unicode tokens if they are rare.
-# This avoids accidentally damaging multilingual data.
 MIN_TOKEN_LENGTH = 1
 
 
