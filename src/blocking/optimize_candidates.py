@@ -4,26 +4,6 @@ from pathlib import Path
 import duckdb
 
 
-# ============================================================
-# AMAZON ML CHALLENGE 2026
-# FAST / RESUMABLE CANDIDATE OPTIMIZATION
-#
-# Strategy:
-#   - Keep every multi-block candidate
-#   - Keep name-only candidates with exact/compact name match
-#   - Keep rare-address-only candidates with:
-#         exact/compact name match
-#         OR address token overlap >= 3
-#
-# IMPORTANT:
-#   Actual source labels are S2 and S3.
-# ============================================================
-
-
-# ============================================================
-# PATHS
-# ============================================================
-
 ROOT = Path(__file__).resolve().parents[2]
 
 NORMALIZED_DIR = ROOT / "artifacts" / "normalized"
@@ -55,20 +35,10 @@ S3_PATH = (
 )
 
 
-# ============================================================
-# SETTINGS
-# ============================================================
-
 THREADS = 8
 MEMORY_LIMIT = "8GB"
 
-# Strategy B
 ADDRESS_OVERLAP_THRESHOLD = 3
-
-
-# ============================================================
-# HELPERS
-# ============================================================
 
 def sql_path(path: Path) -> str:
     return str(path).replace("\\", "/")
@@ -143,10 +113,6 @@ def write_part(
     return part_path
 
 
-# ============================================================
-# MAIN
-# ============================================================
-
 def main() -> None:
 
     print("=" * 80)
@@ -187,9 +153,6 @@ def main() -> None:
         exist_ok=True
     )
 
-    # --------------------------------------------------------
-    # DuckDB
-    # --------------------------------------------------------
 
     con = duckdb.connect()
 
@@ -225,9 +188,6 @@ def main() -> None:
             """
         )
 
-        # ----------------------------------------------------
-        # Confirm actual source labels
-        # ----------------------------------------------------
 
         candidate_sql = sql_quote(
             INPUT_CANDIDATES
@@ -263,15 +223,6 @@ def main() -> None:
                 f"Found:            {labels}\n"
             )
 
-        # ----------------------------------------------------
-        # PART 1
-        #
-        # Multi-block candidates
-        #
-        # These were already shown to have extremely high
-        # purity, so keep all of them.
-        # ----------------------------------------------------
-
         multi_part = write_part(
             con,
             "part_multi_block.parquet",
@@ -293,13 +244,6 @@ def main() -> None:
             """
         )
 
-        # ----------------------------------------------------
-        # PART 2A
-        #
-        # NAME-ONLY -> S2
-        #
-        # Require exact normalized or compact name.
-        # ----------------------------------------------------
 
         name_s2_part = write_part(
             con,
@@ -352,11 +296,6 @@ def main() -> None:
             """
         )
 
-        # ----------------------------------------------------
-        # PART 2B
-        #
-        # NAME-ONLY -> S3
-        # ----------------------------------------------------
 
         name_s3_part = write_part(
             con,
@@ -409,17 +348,6 @@ def main() -> None:
             """
         )
 
-        # ----------------------------------------------------
-        # PART 3A
-        #
-        # RARE ADDRESS -> S2
-        #
-        # Important optimization:
-        #
-        # We DO NOT build a 53M-row enriched table.
-        #
-        # We only load the columns needed for this query.
-        # ----------------------------------------------------
 
         rare_s2_part = write_part(
             con,
@@ -490,11 +418,7 @@ def main() -> None:
             """
         )
 
-        # ----------------------------------------------------
-        # PART 3B
-        #
-        # RARE ADDRESS -> S3
-        # ----------------------------------------------------
+    
 
         rare_s3_part = write_part(
             con,
@@ -564,10 +488,6 @@ def main() -> None:
                 END
             """
         )
-
-        # ----------------------------------------------------
-        # FINAL UNION
-        # ----------------------------------------------------
 
         print()
         print("=" * 80)
