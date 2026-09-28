@@ -2,27 +2,7 @@ from __future__ import annotations
 
 import argparse
 from pathlib import Path
-
 import duckdb
-
-
-# ============================================================
-# AMAZON ML CHALLENGE 2026
-# RECALL EXPANSION EVALUATION
-#
-# Evaluates NEW candidates against the frozen 31.22M base.
-#
-# IMPORTANT:
-# We do NOT construct:
-#
-#     base UNION experiment
-#
-# as one giant 50M+ table.
-#
-# Instead we calculate the incremental contribution using
-# an ANTI JOIN.
-# ============================================================
-
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -86,10 +66,6 @@ def evaluate_one(
     e = sql_path(experiment)
     g = sql_path(GT)
 
-    # --------------------------------------------------------
-    # Counts
-    # --------------------------------------------------------
-
     experiment_count = scalar(
         con,
         f"""
@@ -114,10 +90,6 @@ def evaluate_one(
         """,
     )
 
-    # --------------------------------------------------------
-    # Base true pairs
-    # --------------------------------------------------------
-
     print("[1/4] Evaluating base true pairs...")
 
     base_true = scalar(
@@ -135,15 +107,6 @@ def evaluate_one(
         """,
     )
 
-    # --------------------------------------------------------
-    # Remove duplicates inside experiment first.
-    #
-    # We only care about the candidate identity:
-    #
-    # S1 + matched_id + source
-    #
-    # Provenance columns do not affect whether the pair is new.
-    # --------------------------------------------------------
 
     print("[2/4] Finding NEW candidates...")
 
@@ -178,10 +141,7 @@ def evaluate_one(
         """,
     )
 
-    # --------------------------------------------------------
-    # NEW true pairs
-    # --------------------------------------------------------
-
+    
     print("[3/4] Measuring NEW true pairs...")
 
     new_true = scalar(
@@ -198,10 +158,6 @@ def evaluate_one(
          AND c.matched_source = gt.matched_source
         """,
     )
-
-    # --------------------------------------------------------
-    # Metrics
-    # --------------------------------------------------------
 
     combined_candidates = base_count + new_count
 
@@ -397,9 +353,6 @@ Run the corresponding expansion experiment first.
                 )
             )
 
-        # ----------------------------------------------------
-        # Save CSV report
-        # ----------------------------------------------------
 
         REPORT.parent.mkdir(
             parents=True,
@@ -472,10 +425,7 @@ Run the corresponding expansion experiment first.
             """
         )
 
-        # ----------------------------------------------------
-        # Summary
-        # ----------------------------------------------------
-
+    
         print("\n" + "=" * 100)
         print("RECALL EXPANSION SUMMARY")
         print("=" * 100)
