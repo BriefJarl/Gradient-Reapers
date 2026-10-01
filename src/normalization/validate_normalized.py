@@ -5,10 +5,6 @@ from pathlib import Path
 import duckdb
 
 
-# ============================================================
-# PROJECT PATHS
-# ============================================================
-
 ROOT = Path(__file__).resolve().parents[2]
 
 NORMALIZED_DIR = ROOT / "artifacts" / "normalized"
@@ -34,17 +30,11 @@ EXPECTED_ROWS = {
 }
 
 
-# ============================================================
-# HELPERS
-# ============================================================
 
 def sql_path(path: Path) -> str:
     return str(path).replace("\\", "/")
 
 
-# ============================================================
-# VALIDATE ONE FILE
-# ============================================================
 
 def validate_file(
     con: duckdb.DuckDBPyConnection,
@@ -63,9 +53,6 @@ def validate_file(
 
     p = sql_path(path)
 
-    # --------------------------------------------------------
-    # Row count
-    # --------------------------------------------------------
 
     row_count = con.execute(
         f"""
@@ -85,9 +72,6 @@ def validate_file(
             f"Expected {expected:,}, got {row_count:,}"
         )
 
-    # --------------------------------------------------------
-    # Entity ID checks
-    # --------------------------------------------------------
 
     duplicate_ids = con.execute(
         f"""
@@ -123,9 +107,6 @@ def validate_file(
             f"{name}: empty entity IDs found."
         )
 
-    # --------------------------------------------------------
-    # Normalized-field QA
-    # --------------------------------------------------------
 
     stats = con.execute(
         f"""
@@ -189,9 +170,6 @@ def validate_file(
     print(f"Empty name_tokens         : {empty_name_tokens:,}")
     print(f"Empty address_tokens      : {empty_address_tokens:,}")
 
-    # --------------------------------------------------------
-    # Raw missingness
-    # --------------------------------------------------------
 
     raw_stats = con.execute(
         f"""
@@ -223,9 +201,6 @@ def validate_file(
     print(f"Missing business_address   : {missing_address:,}")
     print(f"Missing country            : {missing_country:,}")
 
-    # --------------------------------------------------------
-    # Sample records
-    # --------------------------------------------------------
 
     print("\nSample normalized records:")
 
@@ -250,11 +225,6 @@ def validate_file(
         print(row)
 
     print("\nValidation: PASSED")
-
-
-# ============================================================
-# MAIN
-# ============================================================
 
 def main() -> None:
 
