@@ -1,24 +1,13 @@
 from __future__ import annotations
-
 from pathlib import Path
-
 import duckdb
 
-
-# ============================================================
-# PROJECT PATHS
-# ============================================================
 
 ROOT = Path(__file__).resolve().parents[2]
 
 TRAIN_DIR = ROOT / "student_resource" / "dataset" / "train"
 TEST_DIR = ROOT / "student_resource" / "dataset" / "test"
 OUTPUT_DIR = ROOT / "artifacts" / "normalized"
-
-
-# ============================================================
-# INPUT FILES
-# ============================================================
 
 TRAIN_FILES = {
     "s1": TRAIN_DIR / "train_source1.tsv",
@@ -31,11 +20,6 @@ TEST_FILES = {
     "s2": TEST_DIR / "test_source2.tsv",
     "s3": TEST_DIR / "test_source3.tsv",
 }
-
-
-# ============================================================
-# HELPERS
-# ============================================================
 
 def sql_path(path: Path) -> str:
     """
@@ -88,9 +72,6 @@ def normalize_country_sql(column: str) -> str:
     """
 
 
-# ============================================================
-# BUILD ONE SOURCE
-# ============================================================
 
 def build_source(
     con: duckdb.DuckDBPyConnection,
@@ -235,10 +216,6 @@ def build_source(
 
     con.execute(query)
 
-    # --------------------------------------------------------
-    # Verify generated artifact
-    # --------------------------------------------------------
-
     count_query = f"""
         SELECT COUNT(*)
         FROM read_parquet('{output_sql}')
@@ -249,11 +226,6 @@ def build_source(
     print(f"Input : {input_path.name}")
     print(f"Output: {output_path}")
     print(f"Rows  : {row_count:,}")
-
-    # --------------------------------------------------------
-    # Basic integrity checks
-    # --------------------------------------------------------
-
     duplicate_ids = con.execute(
         f"""
         SELECT COUNT(*)
@@ -291,10 +263,6 @@ def build_source(
     print("Validation: PASSED")
 
 
-# ============================================================
-# MAIN
-# ============================================================
-
 def main() -> None:
 
     print("\nAMAZON ML CHALLENGE 2026")
@@ -309,9 +277,6 @@ def main() -> None:
 
     try:
 
-        # ----------------------------------------------------
-        # TRAIN
-        # ----------------------------------------------------
 
         for source, input_path in TRAIN_FILES.items():
 
@@ -327,9 +292,6 @@ def main() -> None:
                 output_path,
             )
 
-        # ----------------------------------------------------
-        # TEST
-        # ----------------------------------------------------
 
         for source, input_path in TEST_FILES.items():
 
