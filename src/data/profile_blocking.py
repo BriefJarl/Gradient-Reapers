@@ -74,10 +74,7 @@ def profile_source(con, path: Path, source_name: str):
     name_norm = normalized_name("business_name")
     address_norm = normalized_address("business_address")
 
-    # ------------------------------------------------------------
-    # NAME CARDINALITY
-    # ------------------------------------------------------------
-
+    
     print("\n[1] BUSINESS NAME CARDINALITY")
 
     result = con.execute(
@@ -107,9 +104,6 @@ def profile_source(con, path: Path, source_name: str):
         f"{unique_names / total * 100:.2f}%"
     )
 
-    # ------------------------------------------------------------
-    # NAME FREQUENCY DISTRIBUTION
-    # ------------------------------------------------------------
 
     print("\n[2] NAME FREQUENCY DISTRIBUTION")
 
@@ -154,9 +148,6 @@ def profile_source(con, path: Path, source_name: str):
 
     print(f"Maximum name frequency : {result[-1]:,}")
 
-    # ------------------------------------------------------------
-    # ADDRESS CARDINALITY
-    # ------------------------------------------------------------
 
     print("\n[3] BUSINESS ADDRESS CARDINALITY")
 
@@ -187,9 +178,6 @@ def profile_source(con, path: Path, source_name: str):
         f"{unique_addresses / non_null * 100:.2f}%"
     )
 
-    # ------------------------------------------------------------
-    # COUNTRY + NAME
-    # ------------------------------------------------------------
 
     print("\n[4] COUNTRY + NAME BLOCK QUALITY")
 
@@ -231,9 +219,6 @@ def profile_source(con, path: Path, source_name: str):
     print(f"Singleton keys             : {singleton_keys:,}")
     print(f"Largest bucket             : {max_bucket:,}")
 
-    # ------------------------------------------------------------
-    # COUNTRY + ADDRESS
-    # ------------------------------------------------------------
 
     print("\n[5] COUNTRY + ADDRESS BLOCK QUALITY")
 
@@ -276,9 +261,6 @@ def profile_source(con, path: Path, source_name: str):
     print(f"Singleton keys                 : {singleton_keys:,}")
     print(f"Largest bucket                 : {max_bucket:,}")
 
-    # ------------------------------------------------------------
-    # TOP NAME COLLISIONS
-    # ------------------------------------------------------------
 
     print("\n[6] TOP NORMALIZED NAME COLLISIONS")
 
