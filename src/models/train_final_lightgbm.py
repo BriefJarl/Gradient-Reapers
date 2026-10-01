@@ -155,10 +155,6 @@ def configure(con: duckdb.DuckDBPyConnection) -> None:
     con.execute(f"SET temp_directory='{sql_quote(TMP_DIR)}'")
 
 
-# ----------------------------------------------------------------------
-# Schema handling
-# ----------------------------------------------------------------------
-
 def describe(
     con: duckdb.DuckDBPyConnection,
     path: Path,
@@ -237,10 +233,6 @@ def choose_negative_ratio(requested: float | None) -> float:
         return 2.5
     return DEFAULT_NEG_RATIO
 
-
-# ----------------------------------------------------------------------
-# Negative selection
-# ----------------------------------------------------------------------
 
 def select_hard_negatives(
     con: duckdb.DuckDBPyConnection,
@@ -480,10 +472,6 @@ def load_training_matrix(
     return X, y, stats
 
 
-# ----------------------------------------------------------------------
-# Entity-level early stopping
-# ----------------------------------------------------------------------
-
 def load_eval_subsample(
     con: duckdb.DuckDBPyConnection,
     features: list[str],
@@ -639,10 +627,6 @@ class EntityF05Metric:
 
         return "macro_f05_proxy", float(f05.mean()), True
 
-
-# ----------------------------------------------------------------------
-# Training
-# ----------------------------------------------------------------------
 
 def train_model(
     X: np.ndarray,
