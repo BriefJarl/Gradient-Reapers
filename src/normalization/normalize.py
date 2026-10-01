@@ -11,10 +11,6 @@ except ImportError:
     unidecode = None
 
 
-# ---------------------------------------------------------
-# Basic text normalization
-# ---------------------------------------------------------
-
 def normalize_unicode(value: Optional[str]) -> str:
     """
     Unicode-safe normalization.
@@ -61,10 +57,6 @@ def normalize_unicode(value: Optional[str]) -> str:
     return value
 
 
-# ---------------------------------------------------------
-# ASCII transliteration
-# ---------------------------------------------------------
-
 def normalize_ascii(value: Optional[str]) -> str:
     """
     Unicode-safe normalization followed by optional
@@ -91,10 +83,6 @@ def normalize_ascii(value: Optional[str]) -> str:
     return normalized
 
 
-# ---------------------------------------------------------
-# Compact representation
-# ---------------------------------------------------------
-
 def compact(value: Optional[str]) -> str:
     """
     Remove spaces from an already normalized string.
@@ -112,9 +100,6 @@ def compact(value: Optional[str]) -> str:
     return re.sub(r"[^a-z0-9]", "", value)
 
 
-# ---------------------------------------------------------
-# Token extraction
-# ---------------------------------------------------------
 
 def tokenize(value: Optional[str]) -> list[str]:
     """
@@ -130,10 +115,6 @@ def tokenize(value: Optional[str]) -> list[str]:
         if token
     ]
 
-
-# ---------------------------------------------------------
-# Numeric token extraction
-# ---------------------------------------------------------
 
 def extract_numeric_tokens(value: Optional[str]) -> list[str]:
     """
@@ -155,9 +136,6 @@ def extract_numeric_tokens(value: Optional[str]) -> list[str]:
     ]
 
 
-# ---------------------------------------------------------
-# Country normalization
-# ---------------------------------------------------------
 
 def normalize_country(value: Optional[str]) -> str:
     """
@@ -166,11 +144,6 @@ def normalize_country(value: Optional[str]) -> str:
     """
 
     return normalize_ascii(value)
-
-
-# ---------------------------------------------------------
-# Business-name normalization
-# ---------------------------------------------------------
 
 def normalize_name(value: Optional[str]) -> dict[str, object]:
     """
@@ -189,10 +162,6 @@ def normalize_name(value: Optional[str]) -> dict[str, object]:
     }
 
 
-# ---------------------------------------------------------
-# Address normalization
-# ---------------------------------------------------------
-
 def normalize_address(value: Optional[str]) -> dict[str, object]:
     """
     Produce multiple normalized views for addresses.
@@ -210,9 +179,6 @@ def normalize_address(value: Optional[str]) -> dict[str, object]:
     }
 
 
-# ---------------------------------------------------------
-# Complete record normalization
-# ---------------------------------------------------------
 
 def normalize_record(
     business_name: Optional[str],
