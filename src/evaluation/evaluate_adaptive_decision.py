@@ -526,9 +526,7 @@ def main() -> None:
         )
     print("=" * 80)
 
-    # -------------------------------------------------------------------------
-    # STEP 6: PROMOTION GATE
-    # -------------------------------------------------------------------------
+    
     best_f05 = best_adaptive["macro_f05"]
     delta = best_f05 - PROTECTED_BASELINE_F05
     promote = "YES" if best_f05 > PROTECTED_BASELINE_F05 else "NO"
@@ -564,9 +562,7 @@ def main() -> None:
     else:
         print("ADAPTIVE DECISION PASSES LOCAL PROMOTION GATE.")
 
-    # -------------------------------------------------------------------------
-    # STEP 7: OUTPUT ARTIFACTS
-    # -------------------------------------------------------------------------
+   
     args.out.parent.mkdir(parents=True, exist_ok=True)
     out_sql = sql_path(args.out)
 
