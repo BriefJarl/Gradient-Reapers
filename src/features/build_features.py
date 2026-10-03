@@ -21,9 +21,7 @@ except ModuleNotFoundError:
     )
 
 
-# ============================================================
-# PATHS
-# ============================================================
+
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -71,9 +69,6 @@ MEMORY_LIMIT = "8GB"
 ROW_GROUP_SIZE = 250_000
 
 
-# ============================================================
-# HELPERS
-# ============================================================
 
 def sql_path(path: Path) -> str:
     return str(path).replace("\\", "/")
@@ -129,9 +124,7 @@ def remove_file(path: Path) -> None:
         path.unlink()
 
 
-# ============================================================
-# BUILD ONE SOURCE
-# ============================================================
+
 
 def build_source_features(
     con: duckdb.DuckDBPyConnection,
