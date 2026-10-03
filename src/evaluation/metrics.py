@@ -19,10 +19,6 @@ from typing import Mapping, Sequence, Set
 import duckdb
 
 
-# ============================================================
-# PYTHON-LEVEL METRICS (DIAGNOSTIC / VALIDATION)
-# ============================================================
-
 def compute_entity_f05(
     predicted_matches: Set[str],
     true_matches: Set[str],
@@ -116,10 +112,6 @@ def compute_macro_metrics(
         "total_entities": float(total_entities),
     }
 
-
-# ============================================================
-# VECTORIZED DUCKDB METRICS (MILLION-SCALE SCORING)
-# ============================================================
 
 def sql_quote(path: Path | str) -> str:
     return str(path).replace("\\", "/").replace("'", "''")
